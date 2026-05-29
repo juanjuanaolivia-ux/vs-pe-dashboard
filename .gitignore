@@ -1,0 +1,18 @@
+# DB descomprimida (queda en runtime, no commitear)
+vs_pe.db
+vs_pe.db-shm
+vs_pe.db-wal
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
