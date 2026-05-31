@@ -151,9 +151,9 @@ def kpis_rubro(periodo: str, subrubro: Optional[str] = None) -> dict:
         SELECT
             COUNT(DISTINCT item_id) AS publicaciones,
             COUNT(DISTINCT seller_id) AS vendedores,
-            AVG(CAST(full_delivery AS REAL)) * 100 AS pct_full,
-            AVG(CAST(free_shipping AS REAL)) * 100 AS pct_envio_gratis,
-            AVG(CASE WHEN catalog_listing IS NOT NULL AND catalog_listing != '' THEN 1.0 ELSE 0 END) * 100 AS pct_catalogo
+            AVG(CASE WHEN fulfillment = 'SI' THEN 1.0 ELSE 0 END) * 100 AS pct_full,
+            AVG(CASE WHEN free_shipping = 'SI' THEN 1.0 ELSE 0 END) * 100 AS pct_envio_gratis,
+            AVG(CASE WHEN catalog_listing = 'SI' THEN 1.0 ELSE 0 END) * 100 AS pct_catalogo
         FROM publicaciones
         WHERE {where}
     """, tuple(params))
@@ -240,7 +240,7 @@ def top_publicaciones(periodo: str, subrubro: Optional[str] = None, categoria: O
             COALESCE(p.gmv, p.price * p.sold_quantity, 0) AS gmv_usd,
             p.sold_quantity AS unidades,
             p.price,
-            p.full_delivery,
+            p.fulfillment AS full_delivery,
             p.free_shipping,
             p.url,
             p.picture
@@ -482,8 +482,8 @@ with tab2:
             df_pub["GMV (USD)"] = df_pub["gmv_usd"].apply(fmt_usd)
             df_pub["Unidades"] = df_pub["unidades"].apply(fmt_num)
             df_pub["Precio"] = df_pub["price"].apply(fmt_usd)
-            df_pub["Full"] = df_pub["full_delivery"].apply(lambda x: "✅" if x else "—")
-            df_pub["Free Ship"] = df_pub["free_shipping"].apply(lambda x: "✅" if x else "—")
+            df_pub["Full"] = df_pub["full_delivery"].apply(lambda x: "✅" if x == "SI" else "—")
+            df_pub["Free Ship"] = df_pub["free_shipping"].apply(lambda x: "✅" if x == "SI" else "—")
             display = df_pub[["picture", "title", "brand", "categoria", "seller_nickname", "GMV (USD)", "Unidades", "Precio", "Full", "Free Ship", "url"]].rename(columns={
                 "picture": "Imagen", "title": "Producto", "brand": "Marca",
                 "categoria": "Categoría", "seller_nickname": "Vendedor", "url": "Link"
