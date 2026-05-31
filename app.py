@@ -243,6 +243,17 @@ def logistica_breakdown(periodo, subrubro=None, categoria=None):
         SUM(CASE WHEN free_shipping!='SI' THEN 1 ELSE 0 END) n_paid,
         COUNT(*) total FROM publicaciones WHERE {w}""", tuple(p)).iloc[0]
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def cobertura_pubs(periodo, subrubro=None, categoria=None):
+    """GMV publicaciones como % del GMV marcas (mercado real)."""
+    w, p = "rubro=? AND periodo=?", [RUBRO_DB, periodo]
+    if subrubro: w += " AND subrubro=?"; p.append(_garble(subrubro))
+    if categoria: w += " AND categoria=?"; p.append(_garble(categoria))
+    gmv_m = q(f"SELECT SUM(gmv) FROM marcas WHERE {w}", tuple(p)).iloc[0, 0] or 0
+    gmv_p = q(f"SELECT SUM(gmv) FROM publicaciones WHERE {w}", tuple(p)).iloc[0, 0] or 0
+    pct = round(gmv_p / gmv_m * 100, 1) if gmv_m else 0
+    return pct, gmv_m, gmv_p
+
 def fmt_usd(v):
     if v is None or (isinstance(v, float) and v != v): return "—"
     v = float(v)
@@ -438,6 +449,10 @@ with tab_analisis:
             leg3 = "".join(f'<div class="dleg-row"><span class="dleg-dot" style="background:{sub_colors[i%len(sub_colors)]}"></span><span class="dleg-name">{esc(r["subrubro"])}</span><span class="dleg-pct">{r["gmv_usd"]/tot_sub*100:.1f}%</span></div>'
                            for i, r in df_sub.iterrows())
             st.markdown(f'<div class="donut-card"><div class="donut-title">Por Subrubro</div><div class="dleg">{leg3}</div></div>', unsafe_allow_html=True)
+
+    cob_pct, gmv_m, _ = cobertura_pubs(periodo, sub_f, cat_f)
+    gmv_pubs_str = "~" + str(round(cob_pct, 1)) + "% del GMV de mercado (" + fmt_usd(gmv_m) + " seg\u00fan top 100 marcas)"
+    st.markdown(f'<div style="margin:4px 0 12px 0;padding:7px 14px;background:rgba(124,106,247,.06);border:1px solid rgba(124,106,247,.2);border-radius:8px;font-size:10px;color:var(--text-muted)">Envio/log. calculado sobre top 100 publicaciones por unidades · <strong style="color:var(--accent)">{cob_pct:.1f}% del GMV de mercado</strong> ({fmt_usd(gmv_m)} seg\u00fan top 100 marcas)</div>', unsafe_allow_html=True)
 
     col_conc, col_char = st.columns(2, gap="small")
     with col_conc:
